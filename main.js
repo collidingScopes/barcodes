@@ -1,75 +1,39 @@
 /*
 To do list:
 Move color functions in separate js file which can be imported to all future projects
-Can this effect be applied on top of an image (either directly, or to reveal pixels, or to glitch?)
 Allow toggle for random color or not, if not -- allow user to choose the master color
-New effect idea:
-- Import image
-- Draw only the darkest luminosity pixels (with some sketchiness)
-- Shimmer the image using this effect
-- Or instead, add shadow pixels at a certain angle (smear the darkest pixels while reducing opacity?)
-- Use a power function for the smear
+Randomize all inputs button
 */
 
 var canvas = document.getElementById("canvas");
 var ctx = canvas.getContext("2d", {
   willReadFrequently: true,
 });
-var canvasWidth = 1000;
-var canvasHeight = 1000;
+var canvasWidth;
+var canvasHeight;
 
 var maxCanvasWidth = 2000;
 var maxCanvasHeight = 2000;
-
-var actualWidth;
-var actualHeight;
-var scaledWidth;
-var scaledHeight;
-var widthScalingRatio;
-var maxImageWidth = 1080; //can be tweaked
 
 var animationSpeed;
 var animationRequest;
 var playAnimationToggle = false;
 
-//detect user browser
-var ua = navigator.userAgent;
-var isSafari = false;
-var isFirefox = false;
-var isIOS = false;
-var isAndroid = false;
-if(ua.includes("Safari")){
-    isSafari = true;
-}
-if(ua.includes("Firefox")){
-    isFirefox = true;
-}
-if(ua.includes("iPhone") || ua.includes("iPad") || ua.includes("iPod")){
-    isIOS = true;
-}
-if(ua.includes("Android")){
-    isAndroid = true;
-}
-console.log("isSafari: "+isSafari+", isFirefox: "+isFirefox+", isIOS: "+isIOS+", isAndroid: "+isAndroid);
-
-var mediaRecorder;
-var recordedChunks;
-var finishedBlob;
-var recordingMessageDiv = document.getElementById("videoRecordingMessageDiv");
-var recordVideoState = false;
-var videoRecordInterval;
-var videoEncoder;
-var muxer;
-var mobileRecorder;
-var videofps = 30;
+var numRows;
+var cellHeight;
+var masterColor;
+var colorArray = [];
+var hueArray = [];
+var powerArray = [];
 
 //add gui
 var obj = {
+  hueRange: 15,
   numWaves: 2,
   waveAmplitude: 20,
   drawProbability: 70,
   roundingFactor: 100,
-  backgroundColor: "#fff8e3",
+  backgroundColor: "#000000",
   canvasWidth: 800,
   canvasHeight: 800,
 };
@@ -85,7 +49,7 @@ var guiOpenToggle = false;
 
 // Choose from accepted values
 gui.addColor(obj, "backgroundColor").name("Background Color").onFinishChange(newCanvas);
-
+gui.add(obj, "hueRange").min(0).max(100).step(1).name('Hue Range').onChange(newCanvas);
 gui.add(obj, "numWaves").min(0).max(100).step(0.1).name('# Waves').onChange(refresh);
 gui.add(obj, "waveAmplitude").min(0).max(100).step(1).name('Wave Amplitude').onChange(refresh);
 gui.add(obj, "drawProbability").min(1).max(100).step(1).name('Draw Probability').onChange(refresh);
@@ -144,13 +108,6 @@ function newCanvas(){
   initiateBackground();
 }
 
-var numRows;
-var cellHeight;
-var masterColor;
-var colorArray = [];
-var hueArray = [];
-var powerArray = [];
-
 function initiateBackground(){
 
   numRows = Math.max(1,Math.ceil(Math.random()*10));
@@ -162,8 +119,8 @@ function initiateBackground(){
   var masterHue = Math.random()*360;
   masterColor = "hsl("+masterHue+","+saturation*100+"%,"+lightness*100+"%)";
   
-  var hueRange = Math.random()*15;
-  var hueStep = Math.random()*15;
+  var hueRange = Math.random()*obj.hueRange;
+  var hueStep = Math.random()*obj.hueRange;
 
   colorArray = [];
   hueArray = [];
@@ -292,108 +249,6 @@ function resetCanvas() {
   startAnimation();
 }
 
-function saveImage(){
-  const link = document.createElement('a');
-  link.href = canvas.toDataURL();
-
-  const date = new Date();
-  const filename = `sieve_${date.toLocaleDateString()}_${date.toLocaleTimeString()}.png`;
-  link.download = filename;
-  link.click();
-}
-
-function tweakHexColor(hexColor, range){
-  var rgbArray = hexToRGB(hexColor);
-
-  var newRGBArray = [];
-
-  newRGBArray.push(Math.floor(rgbArray[0]+range*Math.random()-range/2));
-  newRGBArray.push(Math.floor(rgbArray[1]+range*Math.random()-range/2));
-  newRGBArray.push(Math.floor(rgbArray[2]+range*Math.random()-range/2));
-
-  var newHexColor = rgbToHex(newRGBArray[0],newRGBArray[1],newRGBArray[2]);
-  return newHexColor;
-}
-
-function getHueFromHex(hex) {
-  const rgb = hexToRgb(hex);
-  const r = rgb.r / 255;
-  const g = rgb.g / 255;
-  const b = rgb.b / 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const delta = max - min;
-
-  let hue = 0;
-
-  if (delta === 0) {
-    hue = 0;
-  } else if (max === r) {
-    hue = (g - b) / delta;
-  } else if (max === g) {
-    hue = 2 + (b - r) / delta;
-  } else {
-    hue = 4 + (r - g) / delta;
-  }
-
-  hue *= 60;
-  if (hue < 0) {
-    hue += 360;
-  }
-
-  return hue;
-}
-
-function hexToRgb(hex) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-  } : null;
-}
-
-function rgbToHue(r, g, b) {
-  const rNorm = r / 255;
-  const gNorm = g / 255;
-  const bNorm = b / 255;
-  const hue = Math.atan2(Math.sqrt(3) * (gNorm - bNorm), 2 * rNorm - gNorm - bNorm);
-  return hue * 180 / Math.PI;
-}
-
-function rgbToSaturation(r, g, b) {
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  return (max - min) / max;
-}
-
-function rgbToLightness(r, g, b) {
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  return (max + min) / 2 / 255;
-}
-
-function interpolateHex(hex1,hex2,factor){
-  hex1RGB = hexToRgb(hex1);
-  hex2RGB = hexToRgb(hex2);
-
-  var newR = Math.round(hex1RGB.r + (hex2RGB.r - hex1RGB.r)*factor);
-  var newG = Math.round(hex1RGB.g + (hex2RGB.g - hex1RGB.g)*factor);
-  var newB = Math.round(hex1RGB.b + (hex2RGB.b - hex1RGB.b)*factor);
-
-  var rgbResult = "rgb("+newR+","+newG+","+newB+")";
-  return rgbResult;
-}
-
-function rgbToHex(r, g, b) {
-  return "#" + (
-    (r.toString(16).padStart(2, "0")) +
-    (g.toString(16).padStart(2, "0")) +
-    (b.toString(16).padStart(2, "0"))
-  );
-}
-
 function toggleGUI(){
   if(guiOpenToggle == false){
       gui.open();
@@ -420,12 +275,12 @@ document.addEventListener('keydown', function(event) {
   } else if(event.key === 'n'){
       newCanvas();
   } else if(event.key === ' '){
-      togglePausePlay();
+      togglePlayPause();
   } 
  
 });
 
-function togglePausePlay(){
+function togglePlayPause(){
   console.log("pause/play animation");
   if(playAnimationToggle==true){
       playAnimationToggle = false;
@@ -434,206 +289,6 @@ function togglePausePlay(){
   } else {
       startAnimation();
   }
-}
-
-function toggleVideoRecord(){
-  if(recordVideoState == false){
-    recordVideoState = true;
-    chooseRecordingFunction();
-  } else {
-    recordVideoState = false;
-    chooseEndRecordingFunction();
-  }
-}
-
-function chooseRecordingFunction(){
-  if(isIOS || isAndroid || isFirefox){
-      startMobileRecording();
-  }else {
-      recordVideoMuxer();
-  }
-}
-
-function chooseEndRecordingFunction(){
-      
-    if(isIOS || isAndroid || isFirefox){
-      mobileRecorder.stop();
-    }else {
-        finalizeVideo();
-    }
-  
-}
-
-//record html canvas element and export as mp4 video
-//source: https://devtails.xyz/adam/how-to-save-html-canvas-to-mp4-using-web-codecs-api
-async function recordVideoMuxer() {
-  console.log("start muxer video recording");
-  var videoWidth = Math.floor(canvas.width/2)*2;
-  var videoHeight = Math.floor(canvas.height/8)*8; //force a number which is divisible by 8
-  console.log("Video dimensions: "+videoWidth+", "+videoHeight);
-
-  //display user message
-  //recordingMessageCountdown(videoDuration);
-  recordingMessageDiv.classList.remove("hidden");
-
-  recordVideoState = true;
-  const ctx = canvas.getContext("2d", {
-    // This forces the use of a software (instead of hardware accelerated) 2D canvas
-    // This isn't necessary, but produces quicker results
-    willReadFrequently: true,
-    // Desynchronizes the canvas paint cycle from the event loop
-    // Should be less necessary with OffscreenCanvas, but with a real canvas you will want this
-    desynchronized: true,
-  });
-
-  muxer = new Mp4Muxer.Muxer({
-    target: new Mp4Muxer.ArrayBufferTarget(),
-  //let muxer = new Muxer({
-      //target: new ArrayBufferTarget(),
-      video: {
-          // If you change this, make sure to change the VideoEncoder codec as well
-          codec: "avc",
-          width: videoWidth,
-          height: videoHeight,
-      },
-
-      firstTimestampBehavior: 'offset', 
-
-    // mp4-muxer docs claim you should always use this with ArrayBufferTarget
-    fastStart: "in-memory",
-  });
-
-  videoEncoder = new VideoEncoder({
-    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-    error: (e) => console.error(e),
-  });
-
-  // This codec should work in most browsers
-  // See https://dmnsgn.github.io/media-codecs for list of codecs and see if your browser supports
-  videoEncoder.configure({
-    codec: "avc1.42003e",
-    width: videoWidth,
-    height: videoHeight,
-    bitrate: 6_000_000,
-    bitrateMode: "constant",
-  });
-  //NEW codec: "avc1.42003e",
-  //ORIGINAL codec: "avc1.42001f",
-
-  refresh();
-  var frameNumber = 0;
-  //setTimeout(finalizeVideo,1000*videoDuration+200); //finish and export video after x seconds
-
-  //take a snapshot of the canvas every x miliseconds and encode to video
-  videoRecordInterval = setInterval(
-      function(){
-          if(recordVideoState == true){
-              renderCanvasToVideoFrameAndEncode({
-                  canvas,
-                  videoEncoder,
-                  frameNumber,
-                  videofps
-              })
-              frameNumber++;
-          }else{
-          }
-      } , 1000/videofps);
-
-}
-
-//finish and export video
-async function finalizeVideo(){
-  console.log("finalize muxer video");
-  clearInterval(videoRecordInterval);
-  playAnimationToggle = false;
-  recordVideoState = false;
-  
-  // Forces all pending encodes to complete
-  await videoEncoder.flush();
-  muxer.finalize();
-  let buffer = muxer.target.buffer;
-  finishedBlob = new Blob([buffer]); 
-  downloadBlob(new Blob([buffer]));
-
-  //hide user message
-  recordingMessageDiv.classList.add("hidden");
-  
-}
-
-async function renderCanvasToVideoFrameAndEncode({
-  canvas,
-  videoEncoder,
-  frameNumber,
-  videofps,
-}) {
-  let frame = new VideoFrame(canvas, {
-      // Equally spaces frames out depending on frames per second
-      timestamp: (frameNumber * 1e6) / videofps,
-  });
-
-  // The encode() method of the VideoEncoder interface asynchronously encodes a VideoFrame
-  videoEncoder.encode(frame);
-
-  // The close() method of the VideoFrame interface clears all states and releases the reference to the media resource.
-  frame.close();
-}
-
-function downloadBlob() {
-  console.log("download video");
-  let url = window.URL.createObjectURL(finishedBlob);
-  let a = document.createElement("a");
-  a.style.display = "none";
-  a.href = url;
-  const date = new Date();
-  const filename = `sieve_${date.toLocaleDateString()}_${date.toLocaleTimeString()}.mp4`;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-}
-
-//record and download videos on mobile devices
-function startMobileRecording(){
-  var stream = canvas.captureStream(videofps);
-  mobileRecorder = new MediaRecorder(stream, { 'type': 'video/mp4' });
-  mobileRecorder.addEventListener('dataavailable', finalizeMobileVideo);
-
-  console.log("start simple video recording");
-  console.log("Video dimensions: "+canvas.width+", "+canvas.height);
-
-  //display user message
-  //recordingMessageCountdown(videoDuration);
-  recordingMessageDiv.classList.remove("hidden");
-  
-  recordVideoState = true;
-  mobileRecorder.start(); //start mobile video recording
-
-  /*
-  setTimeout(function() {
-      recorder.stop();
-  }, 1000*videoDuration+200);
-  */
-}
-
-function finalizeMobileVideo(e) {
-  setTimeout(function(){
-      console.log("finish simple video recording");
-      recordVideoState = false;
-      /*
-      mobileRecorder.stop();*/
-      var videoData = [ e.data ];
-      finishedBlob = new Blob(videoData, { 'type': 'video/mp4' });
-      downloadBlob(finishedBlob);
-      
-      //hide user message
-      recordingMessageDiv.classList.add("hidden");
-
-  },500);
-
-}
-
-function randomWithinRange(value,range){
-  return value-range+Math.random()*range*2;
 }
 
 //MAIN METHOD

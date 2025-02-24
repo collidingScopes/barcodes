@@ -31,25 +31,23 @@
   
 </head>
 <body>
-<!--
-Choose an image URL:
-<input id="image-src" type="text" value="http://"><button id="load-image">Load image</button>
--->
 
-<div id="toolDiv">
-  <div id="gui"></div>
-  <div id="canvasSizeTextBox"></div>
+  <div id="toolDiv">
+    <div id="gui"></div>
+    <div id="canvasSizeTextBox"></div>
 
-  <canvas id="canvas"></canvas>
+    <canvas id="canvas"></canvas>
 
-  <div id="videoRecordingMessageDiv" class="hidden sticky-bottom">
-      Video recording underway. Press menu button or "v" to stop. The video will be saved to your downloads folder afterwards.
+    <div id="videoRecordingMessageDiv" class="hidden sticky-bottom">
+        Video recording underway. Press menu button or "v" to stop. The video will be saved to your downloads folder afterwards.
+    </div>
+
   </div>
-
-</div>
 
 </body>
 
+<script src="colorFunctions.js"></script>
+<script src="canvasVideoExport.js"></script>
 <script src="main.js"></script>
 <script src="mp4-muxer-main/build/mp4-muxer.js"></script>
 
