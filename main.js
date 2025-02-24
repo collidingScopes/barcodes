@@ -21,17 +21,11 @@ var canvasHeight = 1000;
 var maxCanvasWidth = 2000;
 var maxCanvasHeight = 2000;
 
-var imageInput = document.getElementById('imageInput');
-imageInput.addEventListener('change', readSourceImage);
-var isImageLoaded = false;
-var userImage = document.getElementById('userImg');
-
 var actualWidth;
 var actualHeight;
 var scaledWidth;
 var scaledHeight;
 var widthScalingRatio;
-var isImageLoaded = false;
 var maxImageWidth = 1080; //can be tweaked
 
 var animationSpeed;
@@ -76,8 +70,8 @@ var obj = {
   drawProbability: 70,
   roundingFactor: 100,
   backgroundColor: "#fff8e3",
-  canvasWidth: 1000,
-  canvasHeight: 1000,
+  canvasWidth: 800,
+  canvasHeight: 800,
 };
 var numWaves = obj.numWaves;
 var waveAmplitude = obj.waveAmplitude / 100;
@@ -92,15 +86,10 @@ var guiOpenToggle = false;
 // Choose from accepted values
 gui.addColor(obj, "backgroundColor").name("Background Color").onFinishChange(newCanvas);
 
-obj['selectImage'] = function () {
-  imageInput.click();
-};
-gui.add(obj, 'selectImage').name('Select Image');
-
 gui.add(obj, "numWaves").min(0).max(100).step(0.1).name('# Waves').onChange(refresh);
 gui.add(obj, "waveAmplitude").min(0).max(100).step(1).name('Wave Amplitude').onChange(refresh);
 gui.add(obj, "drawProbability").min(1).max(100).step(1).name('Draw Probability').onChange(refresh);
-gui.add(obj, "roundingFactor").min(0).max(100).step(1).name('Smoothness').onChange(refresh);
+gui.add(obj, "roundingFactor").min(1).max(100).step(1).name('Smoothness').onChange(refresh);
 
 obj['refreshCanvas'] = function () {
   resetCanvas();
@@ -122,13 +111,8 @@ obj['saveVideo'] = function () {
 };
 gui.add(obj, 'saveVideo').name("Start/Stop Video Export (v)");
 
-obj['importImage'] = function () {
-  imageInput.click();
-};
-gui.add(obj, 'importImage').name("Import Image");
-
-gui.add(obj, "canvasWidth").max(maxCanvasWidth).name("Canvas Width").listen().onChange(refresh);
-gui.add(obj, "canvasHeight").max(maxCanvasHeight).name("Canvas Height").listen().onChange(refresh);
+gui.add(obj, "canvasWidth").max(maxCanvasWidth).name("Canvas Width").onChange(refresh);
+gui.add(obj, "canvasHeight").max(maxCanvasHeight).name("Canvas Height").onChange(refresh);
 
 customContainer = document.getElementById( 'gui' );
 customContainer.appendChild(gui.domElement);
@@ -166,7 +150,6 @@ var masterColor;
 var colorArray = [];
 var hueArray = [];
 var powerArray = [];
-
 
 function initiateBackground(){
 
@@ -210,16 +193,6 @@ function initiateBackground(){
         color1 = colorArray[row][col-1];
       }
 
-      /*
-      if(Math.random()>0.05){
-        hue2 = randomWithinRange(hue1,hueRange);
-        color2 = "hsl("+hue2+","+(randomWithinRange(saturation,saturationRange))*100+"%,"+(randomWithinRange(lightness,saturationRange))*100+"%)";
-      } else {
-        color2 = "#0f083e";
-        hue2 = getHueFromHex(color2);
-      }
-      */
-
       hue2 = randomWithinRange(hue1,hueRange);
       color2 = "hsl("+hue2+","+(randomWithinRange(saturation,saturationRange))*100+"%,"+(randomWithinRange(lightness,saturationRange))*100+"%)";
 
@@ -237,8 +210,6 @@ function initiateBackground(){
 
 }
 
-//Generative animation
-
 function startAnimation(){
 
   console.log("start generative animation");
@@ -250,18 +221,8 @@ function startAnimation(){
   }//cancel any existing animation loops 
   playAnimationToggle = true;
 
-  //ctx.fillStyle = "black";
-  //ctx.fillStyle = "#fff8e3";
-  //ctx.fillStyle = "#0c0d47";
-  
-  if(isImageLoaded == false){
-    ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0,0,canvasWidth,canvasHeight);
-  } else {
-    console.log("Draw image to canvas (2)");
-    drawImageToCanvas();
-  }
-
+  ctx.fillStyle = backgroundColor;
+  ctx.fillRect(0,0,canvasWidth,canvasHeight);
 
   var numDotsPerFrame = canvasHeight;
   var counter = 0;
@@ -321,70 +282,6 @@ function startAnimation(){
 }
 
 //HELPER FUNCTIONS BELOW
-
-//read and accept user input image
-function readSourceImage(){
-
-  if(playAnimationToggle==true){
-      playAnimationToggle = false;
-      cancelAnimationFrame(animationRequest);
-      console.log("cancel animation");
-  }
-      
-  //read image file      
-  var file = imageInput.files[0];
-  var reader = new FileReader();
-  reader.onload = (event) => {
-      var imageData = event.target.result;
-      userImage = new Image();
-      userImage.src = imageData;
-      userImage.onload = () => {
-        
-          actualWidth = userImage.width;
-          actualHeight = userImage.height;
-
-          //image scaling
-          if(actualWidth > maxImageWidth){
-              scaledWidth = maxImageWidth;
-              widthScalingRatio = scaledWidth / actualWidth;
-              scaledHeight = actualHeight * widthScalingRatio;
-          } else{
-              scaledWidth = actualWidth;
-              widthScalingRatio = 1;
-              scaledHeight = actualHeight;
-          }
-
-          scaledWidth = Math.floor(scaledWidth/2)*2; //video encoder doesn't accept odd numbers
-          scaledHeight = Math.floor(scaledHeight/8)*8; //video encoder wants a multiple of 8
-          console.log("Image width/height: "+scaledWidth+", "+scaledHeight);
-
-          isImageLoaded = true;
-          drawImageToCanvas();
-          refresh();
-          
-      };
-  };
-    
-  reader.readAsDataURL(file);
-
-}
-
-function drawImageToCanvas(){
-  
-  console.log("draw image to canvas");
-
-  //resize the src variable of the original image
-  canvasWidth = scaledWidth;
-  canvasHeight = scaledHeight;
-  canvas.width = canvasWidth;
-  canvas.height = canvasHeight;
-
-  obj.canvasWidth = canvasWidth;
-  obj.canvasHeight = canvasHeight;
-  
-  //draw the resized image onto the canvas
-  ctx.drawImage(userImage, 0, 0, scaledWidth, scaledHeight);
-}
 
 function resetCanvas() {
   if(playAnimationToggle==true){
@@ -520,102 +417,15 @@ document.addEventListener('keydown', function(event) {
       toggleGUI();
   } else if(event.key === 'p'){
       pausePlayAnimation();
-  } else if(event.key === 'm'){
-      toggleMarkerDraw();
-  }  else if(event.key === 'n'){
+  } else if(event.key === 'n'){
       newCanvas();
-  }
+  } else if(event.key === ' '){
+      togglePausePlay();
+  } 
  
 });
 
-// Mondrian object and functions
-
-var mondrianPalette = ["black","white","red","blue","yellow"];
-
-function randInt (min, max) {
-  return Math.floor(Math.random() * (max - min) + min)
-}
-
-class Point {
-  constructor (x, y) {
-      this.x = x
-      this.y = y
-  }
-}
-
-class Rectangle {
-  constructor (min, max) {
-      this.min = min
-      this.max = max
-  }
-
-  get width () {
-      return this.max.x - this.min.x
-  }
-
-  get height () {
-      return this.max.y - this.min.y
-  }
-
-  draw (ctx) {
-      // Draw clockwise
-      ctx.moveTo(this.min.x, this.min.y)
-      ctx.lineTo(this.max.x, this.min.y)
-      ctx.lineTo(this.max.x, this.max.y)
-      ctx.lineTo(this.min.x, this.max.y)
-      ctx.lineTo(this.min.x, this.min.y)
-  }
-
-  split (xPad, yPad, depth, limit, ctx) {
-      ctx.fillStyle = mondrianPalette[randInt(0, mondrianPalette.length)]
-      ctx.fillRect(this.min.x, this.min.y, this.max.x, this.max.y)
-      this.draw(ctx)
-
-      // Check the level of recursion
-      if (depth === limit) {
-      return
-      }
-
-      // Check the rectangle is enough large and tall
-      if (this.width < 2 * xPad || this.height < 2 * yPad) {
-      return
-      }
-
-      // If the rectangle is wider than it's height do a left/right split
-      var r1 = new Rectangle()
-      var r2 = new Rectangle()
-      if (this.width > this.height) {
-      var x = randInt(this.min.x + xPad, this.max.x - xPad)
-      r1 = new Rectangle(this.min, new Point(x, this.max.y))
-      r2 = new Rectangle(new Point(x, this.min.y), this.max)
-      // Else do a top/bottom split
-      } else {
-      var y = randInt(this.min.y + yPad, this.max.y - yPad)
-      r1 = new Rectangle(this.min, new Point(this.max.x, y))
-      r2 = new Rectangle(new Point(this.min.x, y), this.max)
-      }
-
-      // Split the sub-rectangles
-      r1.split(xPad, yPad, depth + 1, limit, ctx)
-      r2.split(xPad, yPad, depth + 1, limit, ctx)
-  }
-}
-
-function drawMondrian(){
-  //draw Mondrian grid
-  ctx.beginPath();
-  ctx.lineWidth = 5;
-
-  var xPad = Math.floor(canvasWidth * 0.05);
-  var yPad = Math.floor(canvasHeight * 0.05);
-
-  var initialRect = new Rectangle(new Point(0, 0), new Point(canvasWidth, canvasHeight));
-  initialRect.split(xPad, yPad, 0, 8, ctx);
-
-  ctx.stroke();
-}
-
-function pausePlayAnimation(){
+function togglePausePlay(){
   console.log("pause/play animation");
   if(playAnimationToggle==true){
       playAnimationToggle = false;
@@ -624,76 +434,6 @@ function pausePlayAnimation(){
   } else {
       startAnimation();
   }
-}
-
-//Perlin noise functions
-//SOURCE: https://github.com/joeiddon/perlin
-
-var perlinDataArray;
-
-const GRID_SIZE = 3;
-const RESOLUTION = 128;
-var numPerlinRows = GRID_SIZE*RESOLUTION;
-var numPerlinCols = GRID_SIZE*RESOLUTION;
-
-function generatePerlinData(){
-
-  perlin.seed(); //reset perlin data
-  perlinDataArray = [];
-
-  let pixel_size = canvasWidth / RESOLUTION;
-  let num_pixels = GRID_SIZE / RESOLUTION;
-  
-  for (let y = 0; y < GRID_SIZE; y += num_pixels / GRID_SIZE){
-      for (let x = 0; x < GRID_SIZE; x += num_pixels / GRID_SIZE){
-          let currentPerlinValue = perlin.get(x, y);
-          perlinDataArray.push(currentPerlinValue);
-
-      }
-  }
-
-}
-
-//use perlin noise to create a smooth gradient background
-function generateGradientBackground(){
-
-  var gradientDataArray;
-  const GRID_SIZE = 1;
-  const RESOLUTION = 32;
-
-  perlin.seed(); //reset perlin data
-  gradientDataArray = [];
-
-  var baseHue = 180 + Math.random()*180; //bound between 180-360 (exclude green/yellow)
-  var hueRange = 300;
-  var saturation = 0.6 + Math.random()*0.4;
-  var lightness = 0.4 + Math.random()*0.35;
-  console.log("base hue / saturation / lightness: "+baseHue+", "+saturation+", "+lightness);
-
-  var pixelWidth = Math.ceil(canvasWidth / RESOLUTION);
-  var pixelHeight = Math.ceil(canvasHeight / RESOLUTION);
-  let num_pixels = GRID_SIZE / RESOLUTION;
-  
-  for (let y = 0; y < GRID_SIZE; y += num_pixels / GRID_SIZE){
-      for (let x = 0; x < GRID_SIZE; x += num_pixels / GRID_SIZE){
-          let currentPerlinValue = perlin.get(x, y);
-          gradientDataArray.push(currentPerlinValue);
-
-          if(backgroundType == "Gradient"){
-            //draw heatmap onto the canvas using perlin data
-            var currentHue = parseInt(currentPerlinValue * hueRange/2 + baseHue);
-            ctx.fillStyle = 'hsl('+currentHue+','+saturation*100+'%'+','+lightness*100+'%)';
-            ctx.fillRect(
-                Math.floor(x / GRID_SIZE * canvasWidth),
-                Math.floor(y / GRID_SIZE * canvasHeight),
-                pixelWidth,
-                pixelHeight,
-            );
-
-          }
-      }
-  }
-               
 }
 
 function toggleVideoRecord(){
@@ -890,21 +630,6 @@ function finalizeMobileVideo(e) {
 
   },500);
 
-}
-
-function lockUnlockCanvas(){
-  canvasLockToggle = !canvasLockToggle;
-  console.log("Canvas lock state: "+canvasLockToggle);
-}
-
-function toggleMarkerDraw(){
-  if(markerToggle){
-    markerToggle = false;
-    obj["marker"] = false;
-  } else {
-    markerToggle = true;
-    obj["marker"] = true;
-  }
 }
 
 function randomWithinRange(value,range){
