@@ -57,6 +57,7 @@ function toggleVideoRecord(){
 }
 
 function chooseRecordingFunction(){
+  resetCanvas();
   if(isIOS || isAndroid || isFirefox){
     startMobileRecording();
   }else {

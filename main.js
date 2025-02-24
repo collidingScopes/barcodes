@@ -1,6 +1,7 @@
 /*
 To do list:
-Move color functions in separate js file which can be imported to all future projects
+Review entire code base and look for opportunities for visual tweaks
+When there are waves, can there be more randomness -- different wave directions, etc.
 Allow toggle for random color or not, if not -- allow user to choose the master color
 Randomize all inputs button
 */
@@ -115,7 +116,7 @@ function initiateBackground(){
 
   var saturation = randomWithinRange(0.5,0.3);
   var lightness = randomWithinRange(0.55,0.2);
-  var saturationRange = 0.2;
+  var saturationRange = 0.3;
   var masterHue = Math.random()*360;
   masterColor = "hsl("+masterHue+","+saturation*100+"%,"+lightness*100+"%)";
   
@@ -155,7 +156,7 @@ function initiateBackground(){
 
       hueArray[row].push(hue2);
       colorArray[row].push(color2);
-      powerArray[row].push(Math.max(5,Math.random()*100));
+      powerArray[row].push(Math.random()*100+10);
       
     }
 
