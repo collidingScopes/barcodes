@@ -27,6 +27,11 @@ var colorArray = [];
 var hueArray = [];
 var powerArray = [];
 
+var numDotsPerFrame = canvasHeight;
+var counter = 0;
+var xShift = 0;
+var maxXShift = 0;
+
 //add gui
 var obj = {
   hueRange: 15,
@@ -168,8 +173,46 @@ function initiateBackground(){
 
 }
 
-function startAnimation(){
+function animationLoop() {
+  if(playAnimationToggle==true){
+    counter++;
+    maxXShift = canvasWidth*0 + (canvasWidth * waveAmplitude * Math.random());
+    
+    for(i=0; i<numDotsPerFrame; i++){
+      var currentX = counter % canvasWidth;
+      var currentY = i % canvasHeight;
 
+      if(Math.random() < (1-drawProbability)){
+        continue;
+      }
+      
+      xShift = Math.round(Math.sin(i/canvasHeight * Math.PI * numWaves)*roundingFactor)/roundingFactor * maxXShift;
+
+      var currentRow = Math.min(numRows-1, Math.max(0, Math.floor( (currentY/canvasHeight) * numRows)));
+      var numCols = colorArray[currentRow].length;
+      var currentCol = Math.min(numCols-1, Math.floor( (currentX / canvasWidth) * numCols));
+
+      var cellHeight = Math.ceil(canvasHeight / numRows);
+      var cellWidth = Math.ceil(canvasWidth / numCols);
+
+      var currentColor = colorArray[currentRow][currentCol];
+      var currentPower = powerArray[currentRow][currentCol];
+
+      var actualX = currentCol*cellWidth + Math.pow(Math.random(),currentPower) * cellWidth;
+      var actualY = currentY;
+
+      ctx.fillStyle = currentColor;
+      ctx.fillRect(actualX + xShift,actualY,1,1);
+    }
+
+    animationRequest = requestAnimationFrame(animationLoop);      
+  } else {
+    cancelAnimationFrame(animationRequest);
+    console.log("animation paused");
+  }
+}
+
+function startAnimation(){
   console.log("start generative animation");
 
   if(playAnimationToggle==true){
@@ -177,66 +220,17 @@ function startAnimation(){
     cancelAnimationFrame(animationRequest);
     console.log("cancel animation");
   }//cancel any existing animation loops 
-  playAnimationToggle = true;
-
+  
   ctx.fillStyle = backgroundColor;
   ctx.fillRect(0,0,canvasWidth,canvasHeight);
 
-  var numDotsPerFrame = canvasHeight;
-  var counter = 0;
-  var xShift = 0;
-  var maxXShift = 0;
-
-  animationRequest = requestAnimationFrame(loop);
-
-  function loop(){
-
-    if(playAnimationToggle==true){
-
-      counter++;
-      maxXShift = canvasWidth*0 + (canvasWidth * waveAmplitude * Math.random());
-      /*randomness = 1000;*/
-      
-      for(i=0; i<numDotsPerFrame; i++){
-
-        var currentX = counter % canvasWidth;
-        //var currentX = canvasWidth/2 + Math.sin(counter / canvasWidth * Math.PI*4) * canvasWidth/2;
-        var currentY = i % canvasHeight;
-
-        if(Math.random() < (1-drawProbability)){
-          continue;
-        }
-        
-        //xShift = Math.pow(Math.sin( (i+counter)*12*Math.PI*2 / randomness ), 1) * maxXShift;
-        xShift = Math.round(Math.sin(i/canvasHeight * Math.PI * numWaves)*roundingFactor)/roundingFactor * maxXShift;
-
-        var currentRow = Math.min(numRows-1, Math.max(0, Math.floor( (currentY/canvasHeight) * numRows)));
-        var numCols = colorArray[currentRow].length;
-        var currentCol = Math.min(numCols-1, Math.floor( (currentX / canvasWidth) * numCols));
+  numDotsPerFrame = canvasHeight;
+  counter = 0;
+  xShift = 0;
+  maxXShift = 0;
   
-        var cellHeight = Math.ceil(canvasHeight / numRows);
-        var cellWidth = Math.ceil (canvasWidth / numCols);
-  
-        var currentColor = colorArray[currentRow][currentCol];
-        var currentPower = powerArray[currentRow][currentCol];
-  
-        var actualX = currentCol*cellWidth + Math.pow(Math.random(),currentPower) * cellWidth;
-        //var actualY = currentRow*cellHeight + Math.pow(Math.random(),1) * cellHeight;
-        var actualY = currentY;
-
-        ctx.fillStyle = currentColor;
-        ctx.fillRect(actualX + xShift,actualY,1,1);
-      }
-
-      animationRequest = requestAnimationFrame(loop);      
-
-    } else {
-      playAnimationToggle = false;
-      cancelAnimationFrame(animationRequest);
-      console.log("cancel animation");
-    }
-
-  }
+  playAnimationToggle = true;
+  animationRequest = requestAnimationFrame(animationLoop);
 }
 
 //HELPER FUNCTIONS BELOW
@@ -284,11 +278,13 @@ document.addEventListener('keydown', function(event) {
 function togglePlayPause(){
   console.log("pause/play animation");
   if(playAnimationToggle==true){
-      playAnimationToggle = false;
-      cancelAnimationFrame(animationRequest);
-      console.log("cancel animation");
+    playAnimationToggle = false;
+    cancelAnimationFrame(animationRequest);
+    console.log("animation paused");
   } else {
-      startAnimation();
+    playAnimationToggle = true;
+    animationRequest = requestAnimationFrame(animationLoop);
+    console.log("animation resumed");
   }
 }
 
